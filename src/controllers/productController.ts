@@ -1,14 +1,19 @@
 import { Request, Response } from "express";
 import Product from "../database/models/productModel";
+import { AuthRequest } from "../middleware/authMiddleware";
+import User from "../database/models/userModel";
+import Category from "../database/models/categoryModel";
 
 class ProductController {
-  async addProduct(req: any, res: Response): Promise<void> {
+  async addProduct(req: AuthRequest, res: Response): Promise<void> {
+    const userId = req.user?.id;
     try {
       const {
         productName,
         productPrice,
         productDescription,
         productTotalStockQty,
+        categoryId,
       } = req.body;
       let fileName;
       if (req.file) {
@@ -21,11 +26,12 @@ class ProductController {
         !productName ||
         !productPrice ||
         !productDescription ||
-        !productTotalStockQty
+        !productTotalStockQty ||
+        !categoryId
       ) {
         res.status(400).json({
           message:
-            "Please provide productName, productPrice, productDescription, productTotalStockQty",
+            "Please provide productName, productPrice, productDescription, productTotalStockQty, categoryId",
         });
         return;
       }
@@ -36,6 +42,8 @@ class ProductController {
         productDescription,
         productTotalStockQty,
         productImageUrl: fileName,
+        userId: userId,
+        categoryId: categoryId,
       });
       res.status(200).json({
         message: "Product added successfully!",
@@ -45,6 +53,25 @@ class ProductController {
         message: "Something went wrong!",
       });
     }
+  }
+
+  async getAllProducts(req: Request, res: Response): Promise<void> {
+    const data = await Product.findAll({
+      include: [
+        {
+          model: User,
+          attributes: ["id", "username", "email"],
+        },
+        {
+          model: Category,
+          attributes: ["id", "categoryName"],
+        },
+      ],
+    });
+    res.status(200).json({
+      message: "Products fetched successfully!",
+      data,
+    });
   }
 }
 

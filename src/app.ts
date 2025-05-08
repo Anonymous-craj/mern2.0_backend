@@ -1,4 +1,4 @@
-import express, { Application, Request, Response } from "express";
+import express, { Application } from "express";
 const app: Application = express();
 const PORT: number = 3000;
 
@@ -9,10 +9,12 @@ import "./database/connection";
 import adminSeeder from "./adminSeeder";
 import userRoute from "./routes/userRoute";
 import productRoute from "./routes/productRoute";
+import categoryController from "./controllers/categoryController";
 app.use(express.json());
 
 //admin Seeder
 adminSeeder();
+categoryController.seedCategory();
 
 app.use("", userRoute);
 app.use("/admin/product", productRoute);
