@@ -5,6 +5,12 @@ const router: Router = express.Router();
 
 router
   .route("/")
-  .post(authMiddleware.isAuthenticated, cartController.addToCart);
+  .post(authMiddleware.isAuthenticated, cartController.addToCart)
+  .get(authMiddleware.isAuthenticated, cartController.getMyCarts);
+
+router
+  .route("/:productId")
+  .delete(authMiddleware.isAuthenticated, cartController.deleteCartItem)
+  .patch(authMiddleware.isAuthenticated, cartController.updateCartItem);
 
 export default router;
