@@ -11,6 +11,7 @@ import userRoute from "./routes/userRoute";
 import productRoute from "./routes/productRoute";
 import categoryRoute from "./routes/categoryRoute";
 import cartRoute from "./routes/cartRoute";
+import orderRoute from "./routes/orderRoute";
 import categoryController from "./controllers/categoryController";
 app.use(express.json());
 
@@ -23,6 +24,7 @@ app.use("", userRoute);
 app.use("/admin/product", productRoute);
 app.use("/admin/category", categoryRoute);
 app.use("/customer/cart", cartRoute);
+app.use("/customer/order", orderRoute);
 app.listen(PORT, () => {
   console.log("Server has started at port:", PORT);
 });
