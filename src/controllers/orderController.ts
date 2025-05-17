@@ -3,8 +3,16 @@ import Order from "../database/models/Order";
 import OrderDetail from "../database/models/OrderDetails";
 import Payment from "../database/models/Payment";
 import { AuthRequest } from "../middleware/authMiddleware";
-import { KhaltiResponse, OrderData, PaymentMethod } from "../types/orderTypes";
+import {
+  KhaltiResponse,
+  OrderData,
+  OrderStatus,
+  PaymentMethod,
+  TransactionStatus,
+  TransactionVerificationResponse,
+} from "../types/orderTypes";
 import { Response } from "express";
+import Product from "../database/models/productModel";
 
 class OrderController {
   async createOrder(req: AuthRequest, res: Response): Promise<void> {
@@ -81,6 +89,128 @@ class OrderController {
       });
     }
   }
+
+  async verifyTransaction(req: AuthRequest, res: Response): Promise<void> {
+    const { pidx } = req.body;
+    if (!pidx) {
+      res.status(400).json({
+        message: "Please provide pidx",
+      });
+      return;
+    }
+    const response = await axios.post(
+      "https://dev.khalti.com/api/v2/epayment/lookup/",
+      { pidx: pidx },
+      {
+        headers: {
+          Authorization: "key  6968a254b4924721ab8e7aebd8579e71",
+        },
+      }
+    );
+    const data: TransactionVerificationResponse = response.data;
+    if (data.status === TransactionStatus.Completed) {
+      await Payment.update(
+        { paymentStatus: "paid" },
+        {
+          where: {
+            pidx: pidx,
+          },
+        }
+      );
+      res.status(200).json({
+        message: "Payment verified successfully!",
+      });
+    } else {
+      res.status(200).json({
+        message: "Payment not verified!",
+      });
+    }
+  }
+  // Customer side starts here
+  async fetchMyOrders(req: AuthRequest, res: Response): Promise<void> {
+    const userId = req.user?.id;
+    const orders = await Order.findAll({
+      where: {
+        userId,
+      },
+      include: [
+        {
+          model: Payment,
+        },
+      ],
+    });
+    if (orders.length > 0) {
+      res.status(200).json({
+        message: "Orders fetched successfully!",
+        data: orders,
+      });
+    } else {
+      res.status(404).json({
+        message: "You haven't ordered anything yet!",
+        data: [],
+      });
+    }
+  }
+
+  async fetchOrderDetails(req: AuthRequest, res: Response): Promise<void> {
+    const { orderId } = req.params;
+
+    const orderDetails = await OrderDetail.findAll({
+      where: {
+        orderId,
+      },
+      include: [
+        {
+          model: Product,
+        },
+      ],
+    });
+    if (orderDetails.length > 0) {
+      res.status(200).json({
+        message: "orderDetails fetched successfully!",
+        data: orderDetails,
+      });
+    } else {
+      res.status(404).json({
+        message: "No orderDetails found for that product",
+        data: [],
+      });
+    }
+  }
+
+  async cancelMyOrder(req: AuthRequest, res: Response): Promise<void> {
+    const userId = req.user?.id;
+    const { orderId } = req.params;
+
+    const cancelOrder: any = await Order.findAll({
+      where: {
+        userId,
+        id: orderId,
+      },
+    });
+    if (
+      cancelOrder?.orderStatus === OrderStatus.OnTheWay ||
+      cancelOrder?.orderStatus === OrderStatus.Packaging
+    ) {
+      res.status(400).json({
+        message:
+          "You cannot cancel order when the product is ontheway or while packaging!",
+      });
+      return;
+    }
+    await Order.update(
+      { orderStatus: OrderStatus.Cancelled },
+      {
+        where: {
+          orderId,
+        },
+      }
+    );
+    res.status(200).json({
+      message: "Order cancelled successfully!",
+    });
+  }
+  //Customer side ends here
 }
 
 export default new OrderController();
