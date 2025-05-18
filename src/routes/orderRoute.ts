@@ -20,14 +20,14 @@ router
 
 router
   .route("/customer")
-  .post(
+  .get(
     authMiddleware.isAuthenticated,
     errorHandler(orderController.fetchMyOrders)
   );
 
 router
   .route("/customer/:id")
-  .post(
+  .patch(
     authMiddleware.isAuthenticated,
     authMiddleware.restrictTo(Role.Customer),
     errorHandler(orderController.cancelMyOrder)
@@ -35,6 +35,27 @@ router
   .get(
     authMiddleware.isAuthenticated,
     errorHandler(orderController.fetchOrderDetails)
+  );
+
+router
+  .route("/admin/payment/:id")
+  .patch(
+    authMiddleware.isAuthenticated,
+    authMiddleware.restrictTo(Role.Admin),
+    errorHandler(orderController.changePaymentStatus)
+  );
+
+router
+  .route("/admin/:id")
+  .patch(
+    authMiddleware.isAuthenticated,
+    authMiddleware.restrictTo(Role.Admin),
+    errorHandler(orderController.changeOrderStatus)
+  )
+  .delete(
+    authMiddleware.isAuthenticated,
+    authMiddleware.restrictTo(Role.Admin),
+    errorHandler(orderController.deleteOrder)
   );
 
 export default router;
